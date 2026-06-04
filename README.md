@@ -106,6 +106,22 @@ Esquema en `db/01_schema.sql`, datos en `db/02_seed.sql` — miralos libremente 
 
 ---
 
+## 🌿 Cómo trabajar y entregar
+
+1. Cloná el repo y **creá tu propia rama** (no trabajes sobre `main`):
+   ```bash
+   git checkout -b solucion-tu-nombre
+   ```
+2. Hacé tus commits en esa rama mientras avanzás (commits chicos y claros suman).
+3. Cuando termines, **pusheá tu rama** y abrí un **Pull Request** hacia `main` (no lo mergees vos):
+   ```bash
+   git push -u origin solucion-tu-nombre
+   ```
+
+> ⚠️ **No pushees a `main`.** Tu entrega es **tu rama + el Pull Request**.
+
+---
+
 ## 📦 Entregable
 - [ ] Tu código con los cambios. Podés tocar **lo que quieras** (endpoints, front, queries, e incluso el esquema si lo justificás).
 - [ ] **`WORKLOG.md` completo** — cuenta tanto como el código: qué encontraste, qué cambiaste y **por qué**, qué supuestos tomaste, qué dejarías para después. Si algo te suena raro, anotalo aunque no lo arregles.
