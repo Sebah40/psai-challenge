@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: challenge_db
+    environment:
+      POSTGRES_USER: challenge
+      POSTGRES_PASSWORD: challenge
+      POSTGRES_DB: retail
+    ports:
+      - "5544:5432"
+    volumes:
+      # Postgres corre estos .sql en orden la primera vez que se crea el volumen.
+      - ./db:/docker-entrypoint-initdb.d:ro
+      - challenge_pgdata:/var/lib/postgresql/data
+
+volumes:
+  challenge_pgdata:
