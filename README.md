@@ -11,7 +11,7 @@ datos imperfectos y cómo justificás tus decisiones.
 
 ---
 
-## 📖 Glosario (1 minuto, leelo)
+## 📖 Glosario (2 minutos, leelo)
 
 | Término | Qué es |
 |---|---|
@@ -20,11 +20,15 @@ datos imperfectos y cómo justificás tus decisiones.
 | **Marca / producto** | La marca (ej. "Suerox") y sus productos (ej. "Suerox Manzana 630ml"). |
 | **Presente** | El producto estaba en la góndola cuando se visitó la tienda. |
 | **Stock** | Unidades disponibles para vender en ese momento (**stock 0 = está pero agotado**). |
-| **Observación** | Una visita a una tienda donde se anotó si el producto estaba y cuánto stock había. |
+| **Observación** | Una visita a una tienda donde se anotó, **en una fecha**, si el producto estaba y cuánto stock había. |
+| **Tenant** | El **cliente** dueño de los datos. Cada tienda pertenece a un tenant. **Este tablero reporta UN tenant: `genomma`.** En el producto real, *toda* consulta filtra por tenant — los clientes nunca se mezclan. |
+| **"Hoy" / estado actual** | La misma tienda+producto se revisita en distintas fechas. El KPI refleja el **estado más reciente** de cada tienda+producto, no todas las visitas históricas. Una observación de hace mucho no representa "hoy". |
 
 ---
 
 ## 📊 Los 2 KPIs
+
+Ambos se calculan **para el tenant `genomma`** y sobre el **estado actual** (la última observación de cada tienda+producto).
 
 ### 1) Distribución Numérica (DN)
 **De todas las tiendas, ¿en qué porcentaje _está_ el producto?**
@@ -46,19 +50,21 @@ Los dos tienen que poder filtrarse por **canal** y por **marca**.
 
 ## 🐛 Qué está mal hoy
 
-Hay **dos** problemas mezclados:
+Hay problemas **mezclados**:
 
 1. **Bugs en las queries del endpoint** (`app/app/api/kpis/route.ts`) → los números no
    cierran y los filtros no responden bien.
 2. **Datos "de campo", con ruido** → como en cualquier sistema real (esto sale de un
-   *mirror* externo), hay filas que **no deberían contar** para el KPI. Decidir cuáles, y qué
-   hacer con ellas, es parte del laburo.
+   *mirror* externo). Hay filas que **no deberían contar** para el KPI: datos de **otro
+   tenant**, **revisitas en varias fechas** de la misma tienda+producto, observaciones
+   **viejas**, y otras inconsistencias. Decidir cuáles, y qué hacer con ellas, es parte del laburo.
 
 ---
 
 ## ✅ ¿Qué significa "dejar los KPIs bien"?
 
-Que el número **refleje correctamente lo que dicen los datos**, según las definiciones de arriba.
+Que el número **refleje correctamente lo que dicen los datos**, según las definiciones de arriba:
+el tenant correcto, el estado actual de cada tienda+producto, y las reglas de presencia/stock.
 
 **No hay un número secreto que tengas que adivinar.** No evaluamos si pegás un decimal exacto,
 sino que: entiendas **qué mide** cada KPI · el cálculo sea **coherente** con la definición y los
@@ -98,33 +104,36 @@ Esquema en `db/01_schema.sql`, datos en `db/02_seed.sql` — miralos libremente 
 - [ ] **Disp da bien.**
 - [ ] **El filtro de Canal funciona** (seleccioná uno y fijate si el resultado es coherente).
 - [ ] **El filtro de Marca funciona.**
+- [ ] **Scope por tenant** — el KPI es de `genomma`; ninguna fila de otro tenant debería colarse.
+- [ ] **Estado actual por fecha** — usá la observación más reciente de cada tienda+producto; las viejas no representan "hoy".
 - [ ] **Datos sucios manejados con criterio** — qué filas excluís/corregís y **por qué** (al WORKLOG).
+- [ ] **Al menos un test** que fije el KPI esperado sobre el subset limpio (chico, pero que exista).
 
-### Extra — opcional (elegí 1 o 2, no hace falta todo)
-- [ ] Un corte o KPI más: ej. **DN por canal**, o **quiebre** (presente pero con stock 0 — alerta típica en retail).
-- [ ] Tests, validación de inputs, o un endpoint que muestre **qué filas se excluyeron y por qué**.
+### Extra — opcional (si te quedan ganas)
+- [ ] Un corte o KPI más: ej. **DN por canal**, o **quiebre** (presente con stock 0).
+- [ ] Validación de inputs, o un endpoint que muestre **qué filas se excluyeron y por qué**.
+- [ ] **Pregunta de escala (en el WORKLOG):** esto en producción corre sobre ~50M observaciones
+      y ~400 tenants, leyendo de *gold marts* read-only (Snowflake). ¿Qué se rompe del enfoque
+      actual y qué cambiarías (índices, una sola query vs varios round-trips, etc.)? Respuesta
+      en prosa, no hace falta implementarla.
 
 ---
 
 ## 🌿 Cómo trabajar y entregar
 
-1. Cloná el repo y **creá tu propia rama** (no trabajes sobre `main`):
-   ```bash
-   git checkout -b solucion-tu-nombre
-   ```
-2. Hacé tus commits en esa rama mientras avanzás (commits chicos y claros suman).
-3. Cuando termines, **pusheá tu rama** y abrí un **Pull Request** hacia `main` (no lo mergees vos):
-   ```bash
-   git push -u origin solucion-tu-nombre
-   ```
+1. **Hacé un _fork_ de este repo** a tu cuenta de GitHub (botón **Fork**, arriba a la derecha).
+2. Cloná **tu fork** y trabajá ahí. Hacé tus commits a medida que avanzás (commits chicos y claros suman).
+3. Cuando termines, **pusheá a tu fork** y **pasanos la URL de tu repositorio** para que lo revisemos y lo bajemos.
 
-> ⚠️ **No pushees a `main`.** Tu entrega es **tu rama + el Pull Request**.
+> ⚠️ **No abras un Pull Request contra este repo ni pidas acceso de escritura.**
+> Tu entrega es **la URL de tu fork** con tus commits.
 
 ---
 
 ## 📦 Entregable
 - [ ] Tu código con los cambios. Podés tocar **lo que quieras** (endpoints, front, queries, e incluso el esquema si lo justificás).
-- [ ] **`WORKLOG.md` completo** — cuenta tanto como el código: qué encontraste, qué cambiaste y **por qué**, qué supuestos tomaste, qué dejarías para después. Si algo te suena raro, anotalo aunque no lo arregles.
+- [ ] **Al menos un test** que fije el KPI sobre el subset limpio conocido.
+- [ ] **`WORKLOG.md` completo** — cuenta tanto como el código: qué encontraste, qué cambiaste y **por qué**, qué supuestos tomaste (¿qué ventana de fecha usaste para "hoy"? ¿por qué?), qué dejarías para después. Si algo te suena raro, anotalo aunque no lo arregles.
 
 ## ⏱️ Tiempo
 **~2-3 horas.** No buscamos algo perfecto y completo: buscamos ver cómo **pensás**, qué **notás**
