@@ -43,7 +43,6 @@ export async function GET(req: Request) {
       params.push(marca);
       conds.push(`m.id = $${params.length}`);
     }
-
     const rows = await query(
       `WITH ultimas AS (
          SELECT DISTINCT ON (tienda_id, producto_id) *

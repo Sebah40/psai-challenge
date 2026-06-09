@@ -80,6 +80,10 @@ Corrí la app con npm install & npm run dev.
 
 * Tienda inactiva y tienda de prueba: Bodega Vieja (activa = false) y PRUEBA QA NO USAR (id 10) contaban en los KPIs. Las excluí del universo en todas las queries con activa = true y t.id <> 10. Una tienda cerrada no es una oportunidad de distribución y la de QA es dato de prueba. No filtro por nombre (%PRUEBA%) porque matchear strings es frágil: en producción pediría un flag es_test en la fuente. El denominador general queda en 8 tiendas.
 
+* Filas huérfanas: la obs 32 apunta a un producto que no existe (999) y la obs 33 a una tienda que no existe (999). Quedan afuera por los INNER JOIN y lo dejo así a propósito: sin FKs el JOIN es el filtro.
+
+* El dropdown de canales leía tiendas de todos los tenants, le agregué el filtro por tenant. Con estos datos no cambiaba nada pero conceptualmente corresponde.
+
 - ¿Cómo te diste cuenta? (qué número no cerraba, qué query corriste, etc.)
 
 Decidí agregar una tabla para ver qué datos se están filtrando y qué datos no se están filtrando, para acelerar el proceso.
@@ -94,9 +98,11 @@ Decidí agregar una tabla para ver qué datos se están filtrando y qué datos n
 - Manejo de datos sucios (qué excluiste / cómo lo trataste y por qué):
 
 ## Decisiones y supuestos
-- (Ej.: "asumí que las tiendas inactivas no cuentan porque…", "a stock NULL lo traté como
-  no-disponible porque…", "para 'hoy' tomé la última obs por tienda+producto y descarté las
-  de más de X días porque…", "scopeo por tenant en todas las queries porque…")
+- A stock NULL lo trato como no disponible: si el dato no afirma que hay stock no cuento disponibilidad.
+- Stock negativo es dato corrupto del mirror: cuenta como presente pero nunca como disponible.
+- Estado actual: la observación más reciente por tienda+producto, sin ventana de antigüedad. Una observación vale hasta que una visita nueva la contradiga.
+- Tiendas inactivas y de prueba fuera del universo de los KPIs.
+- El tenant va hardcodeado como constante: en el producto real saldría de la sesión del usuario, nunca de la URL.
 
 ## Test
 - ¿Qué fijaste en el/los test(s)? (qué KPI, sobre qué subconjunto conocido)
@@ -107,13 +113,18 @@ Decidí agregar una tabla para ver qué datos se están filtrando y qué datos n
 - Si hiciste algún extra, contalo acá.
 
 * Agregué exclusión manual de observaciones: columna excluida BOOLEAN DEFAULT false en el esquema, un PATCH en /api/observaciones que la togglea (scopeado por tenant) y en la UI un botón Excluir por fila más un modal con las excluidas donde se pueden reincorporar. La exclusión corre antes del DISTINCT ON, así al excluir una observación la anterior de esa tienda+producto vuelve a ser el estado actual. Nota: en el producto real el mirror es read-only, esto viviría en una tabla de exclusiones propia de la app que se joinea contra el mart, no como columna del mirror.
+
+* Los filtros de Canal y Marca pasaron de dropdown fijo a combobox con búsqueda: un input con datalist que sugiere opciones a medida que escribís. La búsqueda va al server (/api/filters?q=) y es insensible a mayúsculas (ILIKE) y a acentos (extensión unaccent de Postgres en ambos lados de la comparación, agregada al schema), escapando % y _ para que no se inyecten wildcards. En el front cada uno tiene debounce de 300ms para no disparar una request por tecla y cache en memoria por búsqueda. El texto aplica el filtro a los KPIs cuando coincide con una opción (también sin importar acentos ni mayúsculas); vacío o sin match es todas/todos.
 - (Opcional, track de profundidad) Esto en producción corre sobre ~50M observaciones y ~400
   tenants, leyendo de *gold marts* read-only (Snowflake). ¿Qué se rompe del enfoque actual y
   qué cambiarías? (índices, una sola query vs varios round-trips, etc.) — en prosa, no hace
   falta implementarlo.
 
 ## Qué dejaría para después / qué no llegué
--
+- Tests con su propia DB y fixtures en vez de pegarle a la DB de desarrollo.
+- Validación de inputs (hoy ?marca=abc devuelve 500 por el cast de Postgres).
+- Mostrar la antigüedad de cada observación en la UI: la frescura del dato debería ser visible.
+- Un flag es_test para las tiendas de prueba en lugar del id hardcodeado.
 
 ## Tiempo aprox. dedicado
--
+- 2 horas en total durante el día sin apuro. Probando Claude Fable.

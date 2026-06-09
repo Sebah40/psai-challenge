@@ -1,4 +1,7 @@
 -- Esquema mini "Perfect Store" para el challenge.
+
+-- Para búsqueda insensible a acentos (Tío = tio).
+CREATE EXTENSION IF NOT EXISTS unaccent;
 -- NOTA: a propósito NO hay foreign keys. Los datos vienen de un mirror externo
 -- (como en producción) y pueden traer filas inconsistentes. Tenelo en cuenta.
 
