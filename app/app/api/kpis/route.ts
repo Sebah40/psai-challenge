@@ -11,9 +11,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const canal = searchParams.get('canal');
     const marca = searchParams.get('marca');
-
-    const conds: string[] = [];
-    const params: any[] = [];
+    const tenant = 'contoso';
+    const conds: string[] = ['o.tenant_id = $1'];
+    const params: any[] = [tenant];
 
     if (canal) {
       params.push(canal);
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
             JOIN productos p ON p.id = o.producto_id
             JOIN marcas m    ON m.id = p.marca_id
             ${where ? where + ' AND' : 'WHERE'} o.presente = true) AS con,
-         (SELECT count(*) FROM tiendas) AS total`,
+         (SELECT count(*) FROM tiendas WHERE tenant_id = $1) AS total`,
       params
     );
 

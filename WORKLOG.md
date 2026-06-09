@@ -46,7 +46,20 @@ Corrí la app con npm install & npm run dev.
     Cada marca tiene un ID y un nombre. Cada vez que selecciono una marca diferente, se lanza un http://localhost:3000/api/kpis?marca=2,3,4,etc. Pero dentro de kpis/route.ts, puedo observar que la función GET de los KPI espera un m.nombre. Lo cambié a m.id, y el problema se solucionó.
 
 - Cosas raras en los datos (¿hay filas de otro tenant?, ¿la misma tienda+producto en varias fechas?, ¿filas inconsistentes?):
+
+    * Scope por tenant — el KPI es de contoso; ninguna fila de otro tenant debería colarse: Mirando la distribución numérica al 100%, podemos asumir que el scope por tenant no está implementado. Esto se solucionó seteando los valores de las variables:
+
+        const tenant = 'contoso';
+    const conds: string[] = ['o.tenant_id = $1'];
+    const params: any[] = [tenant];
+
+    y ajustando una de las queries:          (SELECT count(*) FROM tiendas WHERE tenant_id = $1) AS total`,
+
+
+
 - ¿Cómo te diste cuenta? (qué número no cerraba, qué query corriste, etc.)
+
+Decidí agregar una tabla para ver qué datos se están filtrando y qué datos no se están filtrando, para acelerar el proceso.
 
 ## Qué cambié y por qué
 - DN:
