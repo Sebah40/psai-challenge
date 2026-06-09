@@ -5,9 +5,46 @@
 
 ## Setup
 - ¿Pudiste levantar todo (DB + front)? ¿Algún problema?
+Levanté todo OK, decidí usar un Postgres localmente en vez de dentro de un Docker. Cargué el schema y el seed.
+Corrí la app con npm install & npm run dev.
 
 ## Qué encontré
-- Bugs / cosas raras en los endpoints:
+- Bugs / cosas raras en los endpoints: 
+
+* Mayúsculas y minúsculas no consistentes en los canales: Hacía que para un mismo canal con casing distinto haya separación de información, lo cual es incorrecto. Lo solucioné con:
+        conds.push(`lower(t.canal) = lower($${params.length})`);
+        'SELECT DISTINCT lower(canal) AS canal FROM tiendas ORDER BY canal'
+        
+* Filtro de Marca no funciona: Cualquier marca específica seleccionada da el mismo valor, lo cual me dice que probablemente el filtro está mal programado. Me fijo los requests en la tabla de Network:
+    {
+    "canales": [
+        "autoservicios",
+        "clubes",
+        "conveniencia",
+        "farmacias"
+    ],
+    "marcas": [
+        {
+            "id": 4,
+            "nombre": "Cicatricure"
+        },
+        {
+            "id": 3,
+            "nombre": "Goicoechea"
+        },
+        {
+            "id": 2,
+            "nombre": "Suerox"
+        },
+        {
+            "id": 1,
+            "nombre": "Tío Nacho"
+        }
+    ]
+}
+
+    Cada marca tiene un ID y un nombre. Cada vez que selecciono una marca diferente, se lanza un http://localhost:3000/api/kpis?marca=2,3,4,etc. Pero dentro de kpis/route.ts, puedo observar que la función GET de los KPI espera un m.nombre. Lo cambié a m.id, y el problema se solucionó.
+
 - Cosas raras en los datos (¿hay filas de otro tenant?, ¿la misma tienda+producto en varias fechas?, ¿filas inconsistentes?):
 - ¿Cómo te diste cuenta? (qué número no cerraba, qué query corriste, etc.)
 
