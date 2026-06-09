@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     }
     if (marca) {
       params.push(marca);
-      conds.push(`m.nombre = $${params.length}`);
+      conds.push(`m.id = $${params.length}`);
     }
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
