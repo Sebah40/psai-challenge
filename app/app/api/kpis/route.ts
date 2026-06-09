@@ -13,11 +13,13 @@ export async function GET(req: Request) {
     const marca = searchParams.get('marca');
     const tenant = 'contoso';
     const conds: string[] = ['o.tenant_id = $1'];
+    const tiendasConds: string[] = ['tenant_id = $1'];
     const params: any[] = [tenant];
 
     if (canal) {
       params.push(canal);
       conds.push(`lower(t.canal) = lower($${params.length})`);
+      tiendasConds.push(`lower(canal) = lower($${params.length})`);
     }
     if (marca) {
       params.push(marca);
@@ -40,7 +42,7 @@ export async function GET(req: Request) {
         JOIN productos p ON p.id = o.producto_id
         JOIN marcas m    ON m.id = p.marca_id
         ${where ? where + ' AND' : 'WHERE'} o.presente = true) AS con,
-     (SELECT count(*) FROM tiendas WHERE tenant_id = $1) AS total`,
+     (SELECT count(*) FROM tiendas WHERE ${tiendasConds.join(' AND ')}) AS total`,
       params
     );
 

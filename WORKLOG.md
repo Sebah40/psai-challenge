@@ -70,6 +70,14 @@ Corrí la app con npm install & npm run dev.
 
 * Solucionado stock cero y negativo: count(*) FILTER (WHERE o.presente = true AND o.stock_unidades > 0) AS con_stock
 
+* Solucionado el denominador de DN: era un count(*) FROM tiendas fijo que ignoraba los filtros, por eso la tarjeta Tiendas siempre mostraba el total. Le armé sus propias condiciones con tenant y canal:
+
+        const tiendasConds: string[] = ['tenant_id = $1'];
+        tiendasConds.push(`lower(canal) = lower($${params.length})`);
+        (SELECT count(*) FROM tiendas WHERE ${tiendasConds.join(' AND ')}) AS total
+
+    El filtro de marca a propósito no achica el denominador: DN es el porcentaje de todas las tiendas del universo que tienen la marca, si la marca filtrara el denominador daría siempre 100%.
+
 - ¿Cómo te diste cuenta? (qué número no cerraba, qué query corriste, etc.)
 
 Decidí agregar una tabla para ver qué datos se están filtrando y qué datos no se están filtrando, para acelerar el proceso.
