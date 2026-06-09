@@ -16,6 +16,8 @@ export default function Page() {
   const [marca, setMarca] = useState('');
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [excluidos, setExcluidos] = useState<Row[]>([]);
   const [modal, setModal] = useState(false);
   const [version, setVersion] = useState(0);
@@ -23,7 +25,7 @@ export default function Page() {
   const [marcaQDeb, setMarcaQDeb] = useState('');
   const [canalQ, setCanalQ] = useState('');
   const [canalQDeb, setCanalQDeb] = useState('');
-  const cacheRef = useRef<Map<string, Row[]>>(new Map());
+  const cacheRef = useRef<Map<string, { rows: Row[]; total: number }>>(new Map());
   const marcasCacheRef = useRef<Map<string, Marca[]>>(new Map());
   const canalesCacheRef = useRef<Map<string, string[]>>(new Map());
   const [err, setErr] = useState('');
@@ -90,21 +92,32 @@ export default function Page() {
       .catch(() => setExcluidos([]));
   }, [canal, marca, version]);
 
-  // Tabla: misma consulta con búsqueda opcional. Cachea por query string para no
-  // repetir requests; el cache se invalida al excluir/reincorporar.
+  // Al cambiar un filtro o los datos, vuelvo a la primera página.
+  useEffect(() => { setPage(1); }, [canal, marca, version]);
+
+  // Tabla paginada. Cachea por filtros+página para no repetir requests; el cache
+  // se invalida al excluir/reincorporar (sube version → se limpia).
+  const PAGE_SIZE = 20;
   useEffect(() => {
     const qs = new URLSearchParams();
     if (canal) qs.set('canal', canal);
     if (marca) qs.set('marca', marca);
+    qs.set('page', String(page));
+    qs.set('pageSize', String(PAGE_SIZE));
     const key = qs.toString();
 
     const cached = cacheRef.current.get(key);
-    if (cached) { setRows(cached); return; }
+    if (cached) { setRows(cached.rows); setTotal(cached.total); return; }
     fetch('/api/observaciones?' + key)
       .then(r => r.json())
-      .then(d => { const rs = d.rows ?? []; cacheRef.current.set(key, rs); setRows(rs); })
-      .catch(() => setRows([]));
-  }, [canal, marca, version]);
+      .then(d => {
+        const rs = d.rows ?? [];
+        cacheRef.current.set(key, { rows: rs, total: d.total ?? 0 });
+        setRows(rs);
+        setTotal(d.total ?? 0);
+      })
+      .catch(() => { setRows([]); setTotal(0); });
+  }, [canal, marca, page, version]);
 
   const setExcluida = (id: number, excluida: boolean) =>
     fetch('/api/observaciones', {
@@ -184,7 +197,7 @@ export default function Page() {
       </p>
 
       <div className="tableBar">
-        <h2 className="tableTitle">Filas consideradas por las queries ({rows.length})</h2>
+        <h2 className="tableTitle">Filas consideradas por las queries ({total})</h2>
         <button className="btn" onClick={() => setModal(true)}>
           Excluidos ({excluidos.length})
         </button>
@@ -214,6 +227,24 @@ export default function Page() {
           ))}
         </tbody>
       </table>
+
+      {total > PAGE_SIZE && (
+        <div className="pager">
+          <button className="btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+            ← Anterior
+          </button>
+          <span className="pagerInfo">
+            Página {page} de {Math.ceil(total / PAGE_SIZE)}
+          </span>
+          <button
+            className="btn"
+            disabled={page >= Math.ceil(total / PAGE_SIZE)}
+            onClick={() => setPage(p => p + 1)}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
 
       {modal && (
         <div className="modalOverlay" onClick={() => setModal(false)}>

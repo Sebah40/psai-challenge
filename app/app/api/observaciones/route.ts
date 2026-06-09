@@ -43,6 +43,16 @@ export async function GET(req: Request) {
       params.push(marca);
       conds.push(`m.id = $${params.length}`);
     }
+
+    // Paginacion: limita filas en la DB (no traemos miles de una) y devolvemos
+    // el total con count(*) OVER() en la misma query, sin un round-trip extra.
+    const pageSize = Math.min(Math.max(parseInt(searchParams.get('pageSize') ?? '20', 10) || 20, 1), 100);
+    const page = Math.max(parseInt(searchParams.get('page') ?? '1', 10) || 1, 1);
+    params.push(pageSize);
+    const limitParam = params.length;
+    params.push((page - 1) * pageSize);
+    const offsetParam = params.length;
+
     const rows = await query(
       `WITH ultimas AS (
          SELECT DISTINCT ON (tienda_id, producto_id) *
@@ -50,16 +60,18 @@ export async function GET(req: Request) {
          WHERE tenant_id = $1 AND NOT excluida
          ORDER BY tienda_id, producto_id, fecha DESC, id DESC
        )
-       SELECT ${cols}
+       SELECT ${cols}, count(*) OVER() AS total
          FROM ultimas o
          JOIN tiendas t   ON t.id = o.tienda_id
          JOIN productos p ON p.id = o.producto_id
          JOIN marcas m    ON m.id = p.marca_id
         WHERE ${conds.join(' AND ')}
-        ORDER BY o.id`,
+        ORDER BY o.id
+        LIMIT $${limitParam} OFFSET $${offsetParam}`,
       params
     );
-    return NextResponse.json({ rows });
+    const total = rows.length ? Number(rows[0].total) : 0;
+    return NextResponse.json({ rows, total, page, pageSize });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
