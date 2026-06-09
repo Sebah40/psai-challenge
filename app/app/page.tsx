@@ -18,6 +18,8 @@ export default function Page() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState('id');
+  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
   const [excluidos, setExcluidos] = useState<Row[]>([]);
   const [modal, setModal] = useState(false);
   const [version, setVersion] = useState(0);
@@ -92,16 +94,24 @@ export default function Page() {
       .catch(() => setExcluidos([]));
   }, [canal, marca, version]);
 
-  // Al cambiar un filtro o los datos, vuelvo a la primera página.
-  useEffect(() => { setPage(1); }, [canal, marca, version]);
+  // Al cambiar un filtro, el orden o los datos, vuelvo a la primera página.
+  useEffect(() => { setPage(1); }, [canal, marca, sort, dir, version]);
 
-  // Tabla paginada. Cachea por filtros+página para no repetir requests; el cache
-  // se invalida al excluir/reincorporar (sube version → se limpia).
+  // Ordenar por columna: si es la misma, alterna asc/desc; si es otra, empieza asc.
+  const toggleSort = (key: string) => {
+    if (sort === key) setDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSort(key); setDir('asc'); }
+  };
+
+  // Tabla paginada. Cachea por filtros+orden+página para no repetir requests; el
+  // cache se invalida al excluir/reincorporar (sube version → se limpia).
   const PAGE_SIZE = 20;
   useEffect(() => {
     const qs = new URLSearchParams();
     if (canal) qs.set('canal', canal);
     if (marca) qs.set('marca', marca);
+    qs.set('sort', sort);
+    qs.set('dir', dir);
     qs.set('page', String(page));
     qs.set('pageSize', String(PAGE_SIZE));
     const key = qs.toString();
@@ -117,7 +127,7 @@ export default function Page() {
         setTotal(d.total ?? 0);
       })
       .catch(() => { setRows([]); setTotal(0); });
-  }, [canal, marca, page, version]);
+  }, [canal, marca, sort, dir, page, version]);
 
   const setExcluida = (id: number, excluida: boolean) =>
     fetch('/api/observaciones', {
@@ -135,10 +145,22 @@ export default function Page() {
   const pct = (v: number | null | undefined) =>
     v === null || v === undefined ? '—' : v.toFixed(1) + '%';
 
+  // Color de la fila según el stock: gris sin dato, rojo agotado/negativo,
+  // ámbar bajo, verde sano.
+  const stockClass = (s: number | null) => {
+    if (s === null) return 'st-null';
+    if (s <= 0) return 'st-quiebre';
+    if (s <= 5) return 'st-bajo';
+    return 'st-ok';
+  };
+
   return (
     <div className="wrap">
-      <h1>Retail KPIs — Perfect Store</h1>
-      <p className="sub">Disponibilidad y Distribución Numérica por canal y marca.</p>
+      <header className="hero">
+        <div className="badge-brand">Perfect Store</div>
+        <h1>Retail KPIs</h1>
+        <p className="sub">Disponibilidad y Distribución Numérica por canal y marca.</p>
+      </header>
 
       <div className="filters">
         <label>
@@ -170,12 +192,12 @@ export default function Page() {
       {err && <div className="err">Error del endpoint: {err}</div>}
 
       <div className="cards">
-        <div className="card">
+        <div className="card card--primary">
           <div className="name">Distribución Numérica</div>
           <div className="kpi">{pct(kpis?.dn)}</div>
           <div className="desc">% de tiendas que tienen el producto</div>
         </div>
-        <div className="card">
+        <div className="card card--primary">
           <div className="name">Disponibilidad</div>
           <div className="kpi">{pct(kpis?.disp)}</div>
           <div className="desc">% de lo presente que tiene stock</div>
@@ -197,36 +219,71 @@ export default function Page() {
       </p>
 
       <div className="tableBar">
-        <h2 className="tableTitle">Filas consideradas por las queries ({total})</h2>
-        <button className="btn" onClick={() => setModal(true)}>
-          Excluidos ({excluidos.length})
-        </button>
+        <div>
+          <h2 className="tableTitle">Filas consideradas por las queries</h2>
+          <span className="tableCount">{total} observaciones</span>
+        </div>
+        <div className="tableActions">
+          <button
+            className="btn"
+            disabled={sort === 'id' && dir === 'asc'}
+            onClick={() => { setSort('id'); setDir('asc'); }}
+          >
+            ↺ Restaurar orden
+          </button>
+          <button className="btn" onClick={() => setModal(true)}>
+            Excluidos ({excluidos.length})
+          </button>
+        </div>
       </div>
-      <table className="data">
-        <thead>
-          <tr>
-            <th>id</th><th>tienda</th><th>canal</th><th>activa</th><th>producto</th>
-            <th>marca</th><th>fecha</th><th>presente</th><th>stock</th><th>tenant</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.id}>
-              <td>{r.id}</td>
-              <td>{r.tienda}</td>
-              <td>{r.canal}</td>
-              <td>{r.activa ? 'sí' : 'no'}</td>
-              <td>{r.producto}</td>
-              <td>{r.marca}</td>
-              <td>{r.fecha}</td>
-              <td>{r.presente ? 'sí' : 'no'}</td>
-              <td>{r.stock_unidades ?? 'NULL'}</td>
-              <td>{r.tenant_id}</td>
-              <td><button className="btn" onClick={() => excluirFila(r)}>Excluir</button></td>
+
+      <div className="legend">
+        <span className="leg st-ok"><i />stock &gt; 5</span>
+        <span className="leg st-bajo"><i />stock bajo (1–5)</span>
+        <span className="leg st-quiebre"><i />agotado / negativo</span>
+        <span className="leg st-null"><i />sin dato</span>
+      </div>
+
+      <div className="tableWrap">
+        <table className="data">
+          <thead>
+            <tr>
+              {['id','tienda','canal','activa','producto','marca','fecha','presente','stock','tenant'].map(col => (
+                <th
+                  key={col}
+                  className={'sortable' + (sort === col ? ' active' : '')}
+                  onClick={() => toggleSort(col)}
+                >
+                  {col}
+                  <span className="arrow">{sort === col ? (dir === 'asc' ? '▲' : '▼') : '⇅'}</span>
+                </th>
+              ))}
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id} className={stockClass(r.stock_unidades)}>
+                <td className="muted">{r.id}</td>
+                <td>{r.tienda}</td>
+                <td>{r.canal}</td>
+                <td>{r.activa
+                  ? <span className="tag tag-on">activa</span>
+                  : <span className="tag tag-off">inactiva</span>}</td>
+                <td>{r.producto}</td>
+                <td>{r.marca}</td>
+                <td className="muted">{r.fecha}</td>
+                <td>{r.presente
+                  ? <span className="tag tag-on">sí</span>
+                  : <span className="tag tag-off">no</span>}</td>
+                <td><span className="stockPill">{r.stock_unidades ?? 'NULL'}</span></td>
+                <td className="muted">{r.tenant_id}</td>
+                <td><button className="btn btn-ghost" onClick={() => excluirFila(r)}>Excluir</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {total > PAGE_SIZE && (
         <div className="pager">
@@ -265,14 +322,16 @@ export default function Page() {
                 </thead>
                 <tbody>
                   {excluidos.map(r => (
-                    <tr key={r.id}>
-                      <td>{r.id}</td>
+                    <tr key={r.id} className={stockClass(r.stock_unidades)}>
+                      <td className="muted">{r.id}</td>
                       <td>{r.tienda}</td>
                       <td>{r.producto}</td>
-                      <td>{r.fecha}</td>
-                      <td>{r.presente ? 'sí' : 'no'}</td>
-                      <td>{r.stock_unidades ?? 'NULL'}</td>
-                      <td><button className="btn" onClick={() => quitarExclusion(r.id)}>Quitar</button></td>
+                      <td className="muted">{r.fecha}</td>
+                      <td>{r.presente
+                        ? <span className="tag tag-on">sí</span>
+                        : <span className="tag tag-off">no</span>}</td>
+                      <td><span className="stockPill">{r.stock_unidades ?? 'NULL'}</span></td>
+                      <td><button className="btn btn-ghost" onClick={() => quitarExclusion(r.id)}>Quitar</button></td>
                     </tr>
                   ))}
                 </tbody>

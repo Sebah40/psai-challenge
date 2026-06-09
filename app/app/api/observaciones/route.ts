@@ -44,6 +44,17 @@ export async function GET(req: Request) {
       conds.push(`m.id = $${params.length}`);
     }
 
+    // Ordenamiento: los nombres de columna no se pueden parametrizar, asi que
+    // mapeamos la clave del cliente a una expresion segura (whitelist). Cualquier
+    // valor desconocido cae a o.id. El secundario por o.id hace la pagina determinista.
+    const sortMap: Record<string, string> = {
+      id: 'o.id', tienda: 't.nombre', canal: 't.canal', activa: 't.activa',
+      producto: 'p.nombre', marca: 'm.nombre', fecha: 'o.fecha',
+      presente: 'o.presente', stock: 'o.stock_unidades', tenant: 'o.tenant_id',
+    };
+    const sortCol = sortMap[searchParams.get('sort') ?? ''] ?? 'o.id';
+    const dir = searchParams.get('dir') === 'desc' ? 'DESC' : 'ASC';
+
     // Paginacion: limita filas en la DB (no traemos miles de una) y devolvemos
     // el total con count(*) OVER() en la misma query, sin un round-trip extra.
     const pageSize = Math.min(Math.max(parseInt(searchParams.get('pageSize') ?? '20', 10) || 20, 1), 100);
@@ -66,7 +77,7 @@ export async function GET(req: Request) {
          JOIN productos p ON p.id = o.producto_id
          JOIN marcas m    ON m.id = p.marca_id
         WHERE ${conds.join(' AND ')}
-        ORDER BY o.id
+        ORDER BY ${sortCol} ${dir} NULLS LAST, o.id
         LIMIT $${limitParam} OFFSET $${offsetParam}`,
       params
     );
