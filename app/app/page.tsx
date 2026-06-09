@@ -3,6 +3,11 @@ import { useEffect, useState } from 'react';
 
 type Kpis = { dn: number | null; disp: number | null; tiendas: number; observaciones: number };
 type Marca = { id: number; nombre: string };
+type Row = {
+  id: number; tienda: string; canal: string; activa: boolean;
+  producto: string; marca: string; fecha: string;
+  presente: boolean; stock_unidades: number | null; tenant_id: string;
+};
 
 export default function Page() {
   const [canales, setCanales] = useState<string[]>([]);
@@ -10,6 +15,7 @@ export default function Page() {
   const [canal, setCanal] = useState('');
   const [marca, setMarca] = useState('');
   const [kpis, setKpis] = useState<Kpis | null>(null);
+  const [rows, setRows] = useState<Row[]>([]);
   const [err, setErr] = useState('');
 
   useEffect(() => {
@@ -28,6 +34,10 @@ export default function Page() {
       .then(r => r.json())
       .then(d => { if (d.error) { setErr(d.error); setKpis(null); } else setKpis(d); })
       .catch(e => setErr(String(e)));
+    fetch('/api/observaciones?' + qs.toString())
+      .then(r => r.json())
+      .then(d => setRows(d.rows ?? []))
+      .catch(() => setRows([]));
   }, [canal, marca]);
 
   const pct = (v: number | null | undefined) =>
@@ -83,6 +93,32 @@ export default function Page() {
       <p className="foot">
         Challenge — los números de arriba no necesariamente están bien. Leé el README.
       </p>
+
+      <h2 className="tableTitle">Filas consideradas por las queries ({rows.length})</h2>
+      <table className="data">
+        <thead>
+          <tr>
+            <th>id</th><th>tienda</th><th>canal</th><th>activa</th><th>producto</th>
+            <th>marca</th><th>fecha</th><th>presente</th><th>stock</th><th>tenant</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.id}>
+              <td>{r.id}</td>
+              <td>{r.tienda}</td>
+              <td>{r.canal}</td>
+              <td>{r.activa ? 'sí' : 'no'}</td>
+              <td>{r.producto}</td>
+              <td>{r.marca}</td>
+              <td>{r.fecha}</td>
+              <td>{r.presente ? 'sí' : 'no'}</td>
+              <td>{r.stock_unidades ?? 'NULL'}</td>
+              <td>{r.tenant_id}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
