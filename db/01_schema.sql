@@ -8,14 +8,14 @@ CREATE TABLE marcas (
 );
 
 -- Multi-tenant: cada tienda pertenece a un cliente (tenant). En este tablero el
--- KPI se reporta para UN tenant ('genomma'). En el producto real, TODA query que
+-- KPI se reporta para UN tenant ('contoso'). En el producto real, TODA query que
 -- toca datos de campo filtra por tenant — nunca se mezclan clientes.
 CREATE TABLE tiendas (
     id         INT PRIMARY KEY,
     nombre     TEXT NOT NULL,
     canal      TEXT NOT NULL,
     activa     BOOLEAN NOT NULL DEFAULT true,
-    tenant_id  TEXT NOT NULL DEFAULT 'genomma'
+    tenant_id  TEXT NOT NULL DEFAULT 'contoso'
 );
 
 CREATE TABLE productos (
@@ -35,7 +35,7 @@ CREATE TABLE observaciones (
     fecha           DATE NOT NULL,
     presente        BOOLEAN NOT NULL,  -- ¿estaba el producto en la tienda?
     stock_unidades  INT,               -- unidades en stock (puede ser NULL)
-    tenant_id       TEXT NOT NULL DEFAULT 'genomma'
+    tenant_id       TEXT NOT NULL DEFAULT 'contoso'
 );
 
 CREATE INDEX idx_obs_tienda   ON observaciones (tienda_id);

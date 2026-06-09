@@ -16,7 +16,7 @@
 - Disp:
 - Filtro canal:
 - Filtro marca:
-- Scope por tenant (el KPI es de `genomma`):
+- Scope por tenant (el KPI es de `contoso`):
 - Estado actual / fechas (¿qué observación tomaste como "hoy" para cada tienda+producto? ¿qué hiciste con las viejas?):
 - Manejo de datos sucios (qué excluiste / cómo lo trataste y por qué):
 

@@ -21,14 +21,14 @@ datos imperfectos y cómo justificás tus decisiones.
 | **Presente** | El producto estaba en la góndola cuando se visitó la tienda. |
 | **Stock** | Unidades disponibles para vender en ese momento (**stock 0 = está pero agotado**). |
 | **Observación** | Una visita a una tienda donde se anotó, **en una fecha**, si el producto estaba y cuánto stock había. |
-| **Tenant** | El **cliente** dueño de los datos. Cada tienda pertenece a un tenant. **Este tablero reporta UN tenant: `genomma`.** En el producto real, *toda* consulta filtra por tenant — los clientes nunca se mezclan. |
+| **Tenant** | El **cliente** dueño de los datos. Cada tienda pertenece a un tenant. **Este tablero reporta UN tenant: `contoso`.** En el producto real, *toda* consulta filtra por tenant — los clientes nunca se mezclan. |
 | **"Hoy" / estado actual** | La misma tienda+producto se revisita en distintas fechas. El KPI refleja el **estado más reciente** de cada tienda+producto, no todas las visitas históricas. Una observación de hace mucho no representa "hoy". |
 
 ---
 
 ## 📊 Los 2 KPIs
 
-Ambos se calculan **para el tenant `genomma`** y sobre el **estado actual** (la última observación de cada tienda+producto).
+Ambos se calculan **para el tenant `contoso`** y sobre el **estado actual** (la última observación de cada tienda+producto).
 
 ### 1) Distribución Numérica (DN)
 **De todas las tiendas, ¿en qué porcentaje _está_ el producto?**
@@ -104,7 +104,7 @@ Esquema en `db/01_schema.sql`, datos en `db/02_seed.sql` — miralos libremente 
 - [ ] **Disp da bien.**
 - [ ] **El filtro de Canal funciona** (seleccioná uno y fijate si el resultado es coherente).
 - [ ] **El filtro de Marca funciona.**
-- [ ] **Scope por tenant** — el KPI es de `genomma`; ninguna fila de otro tenant debería colarse.
+- [ ] **Scope por tenant** — el KPI es de `contoso`; ninguna fila de otro tenant debería colarse.
 - [ ] **Estado actual por fecha** — usá la observación más reciente de cada tienda+producto; las viejas no representan "hoy".
 - [ ] **Datos sucios manejados con criterio** — qué filas excluís/corregís y **por qué** (al WORKLOG).
 - [ ] **Al menos un test** que fije el KPI esperado sobre el subset limpio (chico, pero que exista).
