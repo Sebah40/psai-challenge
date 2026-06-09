@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 
     if (canal) {
       params.push(canal);
-      conds.push(`t.canal = $${params.length}`);
+      conds.push(`lower(t.canal) = lower($${params.length})`);
     }
     if (marca) {
       params.push(marca);

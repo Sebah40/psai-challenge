@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 export async function GET() {
   try {
     const canales = await query<{ canal: string }>(
-      'SELECT DISTINCT canal FROM tiendas ORDER BY canal'
+      'SELECT DISTINCT lower(canal) AS canal FROM tiendas ORDER BY canal'
     );
     const marcas = await query<{ id: number; nombre: string }>(
       'SELECT id, nombre FROM marcas ORDER BY nombre'
