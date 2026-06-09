@@ -78,6 +78,8 @@ Corrí la app con npm install & npm run dev.
 
     El filtro de marca a propósito no achica el denominador: DN es el porcentaje de todas las tiendas del universo que tienen la marca, si la marca filtrara el denominador daría siempre 100%.
 
+* Tienda inactiva y tienda de prueba: Bodega Vieja (activa = false) y PRUEBA QA NO USAR (id 10) contaban en los KPIs. Las excluí del universo en todas las queries con activa = true y t.id <> 10. Una tienda cerrada no es una oportunidad de distribución y la de QA es dato de prueba. No filtro por nombre (%PRUEBA%) porque matchear strings es frágil: en producción pediría un flag es_test en la fuente. El denominador general queda en 8 tiendas.
+
 - ¿Cómo te diste cuenta? (qué número no cerraba, qué query corriste, etc.)
 
 Decidí agregar una tabla para ver qué datos se están filtrando y qué datos no se están filtrando, para acelerar el proceso.

@@ -30,7 +30,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ rows });
     }
 
-    const conds: string[] = ['o.tenant_id = $1'];
+    // tienda 10 = PRUEBA QA, dato de prueba conocido del mirror; en produccion
+    // seria un flag en la fuente, no un id hardcodeado
+    const conds: string[] = ['o.tenant_id = $1', 't.activa = true', 't.id <> 10'];
     const params: any[] = [tenant];
 
     if (canal) {
