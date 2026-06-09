@@ -1,5 +1,13 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import {
+  Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend,
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+
+const STOCK_COLORS = ['#16a34a', '#d97706', '#dc2626', '#94a3b8'];
 
 type Kpis = { dn: number | null; disp: number | null; tiendas: number; observaciones: number };
 type Marca = { id: number; nombre: string };
@@ -8,6 +16,9 @@ type Row = {
   producto: string; marca: string; fecha: string;
   presente: boolean; stock_unidades: number | null; tenant_id: string;
 };
+type DnCanal = { canal: string; tiendas: number; dn: number };
+type StockBreak = { ok: number; bajo: number; quiebre: number; sindato: number };
+type Charts = { dnPorCanal: DnCanal[]; stock: StockBreak };
 
 export default function Page() {
   const [canales, setCanales] = useState<string[]>([]);
@@ -15,6 +26,7 @@ export default function Page() {
   const [canal, setCanal] = useState('');
   const [marca, setMarca] = useState('');
   const [kpis, setKpis] = useState<Kpis | null>(null);
+  const [charts, setCharts] = useState<Charts | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -92,6 +104,10 @@ export default function Page() {
       .then(r => r.json())
       .then(d => setExcluidos(d.rows ?? []))
       .catch(() => setExcluidos([]));
+    fetch('/api/charts' + (marca ? '?marca=' + marca : ''))
+      .then(r => r.json())
+      .then(d => { if (!d.error) setCharts(d); })
+      .catch(() => setCharts(null));
   }, [canal, marca, version]);
 
   // Al cambiar un filtro, el orden o los datos, vuelvo a la primera página.
@@ -154,6 +170,10 @@ export default function Page() {
     return 'st-ok';
   };
 
+  const dnCanal = charts?.dnPorCanal ?? [];
+  const st = charts?.stock;
+  const stockTotal = st ? st.ok + st.bajo + st.quiebre + st.sindato : 0;
+
   return (
     <div className="wrap">
       <header className="hero">
@@ -211,6 +231,73 @@ export default function Page() {
           <div className="name">Observaciones</div>
           <div className="kpi">{kpis?.observaciones ?? '—'}</div>
           <div className="desc">consideradas</div>
+        </div>
+      </div>
+
+      <div className="charts">
+        <div className="chart">
+          <div className="chartTitle">Distribución Numérica por canal</div>
+          <div className="chartBox">
+            {dnCanal.length ? (
+              <Bar
+                data={{
+                  labels: dnCanal.map(c => c.canal),
+                  datasets: [{
+                    label: 'DN',
+                    data: dnCanal.map(c => c.dn),
+                    backgroundColor: '#4f46e5',
+                    borderRadius: 6,
+                    maxBarThickness: 56,
+                  }],
+                }}
+                options={{
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: c => `DN ${(c.raw as number).toFixed(1)}%` } },
+                  },
+                  scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                  },
+                }}
+              />
+            ) : <div className="chartEmpty">Sin datos</div>}
+          </div>
+        </div>
+
+        <div className="chart">
+          <div className="chartTitle">Estado de stock (última observación)</div>
+          <div className="chartBox">
+            {stockTotal ? (
+              <Doughnut
+                data={{
+                  labels: ['En stock', 'Bajo', 'Agotado', 'Sin dato'],
+                  datasets: [{
+                    data: [st!.ok, st!.bajo, st!.quiebre, st!.sindato],
+                    backgroundColor: STOCK_COLORS,
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    hoverOffset: 6,
+                  }],
+                }}
+                options={{
+                  maintainAspectRatio: false,
+                  cutout: '62%',
+                  plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, padding: 14 } },
+                    tooltip: {
+                      callbacks: {
+                        label: c => {
+                          const v = c.raw as number;
+                          return ` ${c.label}: ${v} (${((v / stockTotal) * 100).toFixed(0)}%)`;
+                        },
+                      },
+                    },
+                  },
+                }}
+              />
+            ) : <div className="chartEmpty">Sin datos</div>}
+          </div>
         </div>
       </div>
 
