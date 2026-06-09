@@ -68,6 +68,8 @@ Corrí la app con npm install & npm run dev.
 
     Para cada tienda+producto uso la observación más reciente como estado actual, incluso si es vieja (caso Sam's Club + Goicoechea, 2026-04-15): una observación vale hasta que una visita nueva la contradiga.
 
+* Solucionado stock cero y negativo: count(*) FILTER (WHERE o.presente = true AND o.stock_unidades > 0) AS con_stock
+
 - ¿Cómo te diste cuenta? (qué número no cerraba, qué query corriste, etc.)
 
 Decidí agregar una tabla para ver qué datos se están filtrando y qué datos no se están filtrando, para acelerar el proceso.

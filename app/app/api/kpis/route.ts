@@ -53,7 +53,7 @@ export async function GET(req: Request) {
      ORDER BY tienda_id, producto_id, fecha DESC, id DESC
    )
    SELECT
-     count(*) FILTER (WHERE o.stock_unidades <> 0) AS con_stock,
+     count(*) FILTER (WHERE o.presente = true AND o.stock_unidades > 0) AS con_stock,
      count(*) FILTER (WHERE o.presente = true)     AS presentes
    FROM ultimas o
    JOIN tiendas t   ON t.id = o.tienda_id
