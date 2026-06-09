@@ -55,7 +55,18 @@ Corrí la app con npm install & npm run dev.
 
     y ajustando una de las queries:          (SELECT count(*) FROM tiendas WHERE tenant_id = $1) AS total`,
 
+* La misma tienda+producto aparece observada en varias fechas: por ejemplo Soriana Sur + Goicoechea Várices figura presente el 2026-05-13 pero ausente el 2026-05-15. Como las queries contaban todas las observaciones históricas, el KPI usaba el dato viejo y Soriana contaba como si todavía tuviera el producto. Lo solucioné agregando un CTE en las queries para quedarme con la última observación de cada tienda+producto:
 
+        WITH ultimas AS (
+          SELECT DISTINCT ON (tienda_id, producto_id) *
+          FROM observaciones
+          WHERE tenant_id = $1
+          ORDER BY tienda_id, producto_id, fecha DESC, id DESC
+        )
+
+    El DISTINCT ON corre adentro del filtro de tenant porque si deduplicara entre tenants, una observación de acme con la misma tienda+producto y la misma fecha podría pisar a la de contoso (pasa con la obs 42 vs la obs 2). El id DESC del ORDER BY es para desempatar de forma determinística si hay dos observaciones con la misma fecha. Lo verifiqué filtrando por Goicoechea: la DN bajó de 60% a 50% (Soriana ya no cuenta) y las observaciones consideradas bajaron de 34 a 31.
+
+    Para cada tienda+producto uso la observación más reciente como estado actual, incluso si es vieja (caso Sam's Club + Goicoechea, 2026-04-15): una observación vale hasta que una visita nueva la contradiga.
 
 - ¿Cómo te diste cuenta? (qué número no cerraba, qué query corriste, etc.)
 

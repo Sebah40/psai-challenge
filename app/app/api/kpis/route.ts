@@ -27,27 +27,39 @@ export async function GET(req: Request) {
 
     // --- Distribución Numérica ---
     const dnRows = await query<{ con: string; total: string }>(
-      `SELECT
-         (SELECT count(DISTINCT o.tienda_id)
-            FROM observaciones o
-            JOIN tiendas t   ON t.id = o.tienda_id
-            JOIN productos p ON p.id = o.producto_id
-            JOIN marcas m    ON m.id = p.marca_id
-            ${where ? where + ' AND' : 'WHERE'} o.presente = true) AS con,
-         (SELECT count(*) FROM tiendas WHERE tenant_id = $1) AS total`,
+      `WITH ultimas AS (
+     SELECT DISTINCT ON (tienda_id, producto_id) *
+     FROM observaciones
+     WHERE tenant_id = $1
+     ORDER BY tienda_id, producto_id, fecha DESC, id DESC
+   )
+   SELECT
+     (SELECT count(DISTINCT o.tienda_id)
+        FROM ultimas o
+        JOIN tiendas t   ON t.id = o.tienda_id
+        JOIN productos p ON p.id = o.producto_id
+        JOIN marcas m    ON m.id = p.marca_id
+        ${where ? where + ' AND' : 'WHERE'} o.presente = true) AS con,
+     (SELECT count(*) FROM tiendas WHERE tenant_id = $1) AS total`,
       params
     );
 
     // --- Disponibilidad ---
     const dispRows = await query<{ con_stock: string; presentes: string }>(
-      `SELECT
-         count(*) FILTER (WHERE o.stock_unidades <> 0) AS con_stock,
-         count(*) FILTER (WHERE o.presente = true)     AS presentes
-       FROM observaciones o
-       JOIN tiendas t   ON t.id = o.tienda_id
-       JOIN productos p ON p.id = o.producto_id
-       JOIN marcas m    ON m.id = p.marca_id
-       ${where}`,
+      `WITH ultimas AS (
+     SELECT DISTINCT ON (tienda_id, producto_id) *
+     FROM observaciones
+     WHERE tenant_id = $1
+     ORDER BY tienda_id, producto_id, fecha DESC, id DESC
+   )
+   SELECT
+     count(*) FILTER (WHERE o.stock_unidades <> 0) AS con_stock,
+     count(*) FILTER (WHERE o.presente = true)     AS presentes
+   FROM ultimas o
+   JOIN tiendas t   ON t.id = o.tienda_id
+   JOIN productos p ON p.id = o.producto_id
+   JOIN marcas m    ON m.id = p.marca_id
+   ${where}`,
       params
     );
 

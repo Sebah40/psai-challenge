@@ -21,11 +21,17 @@ export async function GET(req: Request) {
     }
 
     const rows = await query(
-      `SELECT o.id, t.nombre AS tienda, t.canal, t.activa,
+      `WITH ultimas AS (
+         SELECT DISTINCT ON (tienda_id, producto_id) *
+         FROM observaciones
+         WHERE tenant_id = $1
+         ORDER BY tienda_id, producto_id, fecha DESC, id DESC
+       )
+       SELECT o.id, t.nombre AS tienda, t.canal, t.activa,
               p.nombre AS producto, m.nombre AS marca,
               to_char(o.fecha, 'YYYY-MM-DD') AS fecha,
               o.presente, o.stock_unidades, o.tenant_id
-         FROM observaciones o
+         FROM ultimas o
          JOIN tiendas t   ON t.id = o.tienda_id
          JOIN productos p ON p.id = o.producto_id
          JOIN marcas m    ON m.id = p.marca_id
