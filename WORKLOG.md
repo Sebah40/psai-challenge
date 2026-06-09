@@ -101,6 +101,8 @@ Decidí agregar una tabla para ver qué datos se están filtrando y qué datos n
 
 ## Extras / pregunta de escala (opcional)
 - Si hiciste algún extra, contalo acá.
+
+* Agregué exclusión manual de observaciones: columna excluida BOOLEAN DEFAULT false en el esquema, un PATCH en /api/observaciones que la togglea (scopeado por tenant) y en la UI un botón Excluir por fila más un modal con las excluidas donde se pueden reincorporar. La exclusión corre antes del DISTINCT ON, así al excluir una observación la anterior de esa tienda+producto vuelve a ser el estado actual. Nota: en el producto real el mirror es read-only, esto viviría en una tabla de exclusiones propia de la app que se joinea contra el mart, no como columna del mirror.
 - (Opcional, track de profundidad) Esto en producción corre sobre ~50M observaciones y ~400
   tenants, leyendo de *gold marts* read-only (Snowflake). ¿Qué se rompe del enfoque actual y
   qué cambiarías? (índices, una sola query vs varios round-trips, etc.) — en prosa, no hace

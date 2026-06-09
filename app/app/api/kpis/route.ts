@@ -27,12 +27,16 @@ export async function GET(req: Request) {
     }
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
+    // La exclusión corre antes del DISTINCT ON: si se excluye una observación,
+    // la anterior de esa tienda+producto vuelve a ser el estado actual.
+    const cteWhere = 'WHERE tenant_id = $1 AND NOT excluida';
+
     // --- Distribución Numérica ---
     const dnRows = await query<{ con: string; total: string }>(
       `WITH ultimas AS (
      SELECT DISTINCT ON (tienda_id, producto_id) *
      FROM observaciones
-     WHERE tenant_id = $1
+     ${cteWhere}
      ORDER BY tienda_id, producto_id, fecha DESC, id DESC
    )
    SELECT
@@ -51,7 +55,7 @@ export async function GET(req: Request) {
       `WITH ultimas AS (
      SELECT DISTINCT ON (tienda_id, producto_id) *
      FROM observaciones
-     WHERE tenant_id = $1
+     ${cteWhere}
      ORDER BY tienda_id, producto_id, fecha DESC, id DESC
    )
    SELECT

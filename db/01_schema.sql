@@ -35,7 +35,8 @@ CREATE TABLE observaciones (
     fecha           DATE NOT NULL,
     presente        BOOLEAN NOT NULL,  -- ¿estaba el producto en la tienda?
     stock_unidades  INT,               -- unidades en stock (puede ser NULL)
-    tenant_id       TEXT NOT NULL DEFAULT 'contoso'
+    tenant_id       TEXT NOT NULL DEFAULT 'contoso',
+    excluida        BOOLEAN NOT NULL DEFAULT false  -- exclusión manual del KPI
 );
 
 CREATE INDEX idx_obs_tienda   ON observaciones (tienda_id);
