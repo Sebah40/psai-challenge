@@ -99,6 +99,8 @@ Decidí agregar una tabla para ver qué datos se están filtrando y qué datos n
 ## Test
 - ¿Qué fijaste en el/los test(s)? (qué KPI, sobre qué subconjunto conocido)
 
+* 6 tests en app/tests/kpis.test.mjs con node:test (sin dependencias nuevas), se corren con npm test con la app y la DB levantadas. Fijan DN, Disp, tiendas y observaciones calculados a mano contra el seed: el general, Goicoechea (Soriana no cuenta por estado actual), Suerox (el stock -2 no cuenta como disponible), farmacias (el denominador respeta el canal), el casing del canal, y la exclusión manual (al excluir una observación resurge la anterior). Las exclusiones manuales no se tienen en cuenta durante los tests: un before() las reincorpora y un after() las restaura como estaban.
+
 ## Extras / pregunta de escala (opcional)
 - Si hiciste algún extra, contalo acá.
 
