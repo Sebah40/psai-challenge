@@ -143,4 +143,4 @@ Qué cambiaría: pre-calcular el estado actual y los KPIs agregados (por tenant/
 - Un flag es_test para las tiendas de prueba en lugar del id hardcodeado.
 
 ## Tiempo aprox. dedicado
-- 2 horas en total durante el día sin apuro. Probando Claude Fable.
+- ~3 horas de trabajo activo repartidas a lo largo del día, con varias pausas (la ventana de calendario fue bastante más larga). De eso, alrededor de 2h30 fueron de construir y verificar, y el resto de investigar y razonar decisiones.
