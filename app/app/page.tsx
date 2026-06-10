@@ -4,6 +4,7 @@ import {
   Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
+import Combobox from './Combobox';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -42,6 +43,9 @@ export default function Page() {
   const cacheRef = useRef<Map<string, { rows: Row[]; total: number }>>(new Map());
   const marcasCacheRef = useRef<Map<string, Marca[]>>(new Map());
   const canalesCacheRef = useRef<Map<string, string[]>>(new Map());
+  const [kpisLoading, setKpisLoading] = useState(true);
+  const [chartsLoading, setChartsLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
   const [err, setErr] = useState('');
 
   // Debounce: las búsquedas recién disparan 300ms después de la última tecla.
@@ -96,10 +100,13 @@ export default function Page() {
     if (canal) qs.set('canal', canal);
     if (marca) qs.set('marca', marca);
     setErr('');
+    setKpisLoading(true);
+    setChartsLoading(true);
     fetch('/api/kpis?' + qs.toString())
       .then(r => r.json())
       .then(d => { if (d.error) { setErr(d.error); setKpis(null); } else setKpis(d); })
-      .catch(e => setErr(String(e)));
+      .catch(e => setErr(String(e)))
+      .finally(() => setKpisLoading(false));
     fetch('/api/observaciones?excluidas=1')
       .then(r => r.json())
       .then(d => setExcluidos(d.rows ?? []))
@@ -107,7 +114,8 @@ export default function Page() {
     fetch('/api/charts' + (marca ? '?marca=' + marca : ''))
       .then(r => r.json())
       .then(d => { if (!d.error) setCharts(d); })
-      .catch(() => setCharts(null));
+      .catch(() => setCharts(null))
+      .finally(() => setChartsLoading(false));
   }, [canal, marca, version]);
 
   // Al cambiar un filtro, el orden o los datos, vuelvo a la primera página.
@@ -134,6 +142,7 @@ export default function Page() {
 
     const cached = cacheRef.current.get(key);
     if (cached) { setRows(cached.rows); setTotal(cached.total); return; }
+    setTableLoading(true);
     fetch('/api/observaciones?' + key)
       .then(r => r.json())
       .then(d => {
@@ -142,7 +151,8 @@ export default function Page() {
         setRows(rs);
         setTotal(d.total ?? 0);
       })
-      .catch(() => { setRows([]); setTotal(0); });
+      .catch(() => { setRows([]); setTotal(0); })
+      .finally(() => setTableLoading(false));
   }, [canal, marca, sort, dir, page, version]);
 
   const setExcluida = (id: number, excluida: boolean) =>
@@ -183,30 +193,26 @@ export default function Page() {
       </header>
 
       <div className="filters">
-        <label>
-          Canal
-          <input
-            list="canales-list"
-            placeholder="(todos)"
-            value={canalQ}
-            onChange={e => setCanalQ(e.target.value)}
-          />
-          <datalist id="canales-list">
-            {canales.map(c => <option key={c} value={c} />)}
-          </datalist>
-        </label>
-        <label>
-          Marca
-          <input
-            list="marcas-list"
-            placeholder="(todas)"
-            value={marcaQ}
-            onChange={e => setMarcaQ(e.target.value)}
-          />
-          <datalist id="marcas-list">
-            {marcas.map(m => <option key={m.id} value={m.nombre} />)}
-          </datalist>
-        </label>
+        <Combobox
+          label="Canal"
+          placeholder="(todos)"
+          value={canalQ}
+          onChange={setCanalQ}
+          options={canales}
+          onPick={c => { setCanalQ(c); setCanal(c); }}
+        />
+        <Combobox
+          label="Marca"
+          placeholder="(todas)"
+          value={marcaQ}
+          onChange={setMarcaQ}
+          options={marcas.map(m => m.nombre)}
+          onPick={name => {
+            setMarcaQ(name);
+            const m = marcas.find(x => x.nombre === name);
+            setMarca(m ? String(m.id) : '');
+          }}
+        />
       </div>
 
       {err && <div className="err">Error del endpoint: {err}</div>}
@@ -214,22 +220,22 @@ export default function Page() {
       <div className="cards">
         <div className="card card--primary">
           <div className="name">Distribución Numérica</div>
-          <div className="kpi">{pct(kpis?.dn)}</div>
+          <div className="kpi">{kpisLoading ? <span className="skeleton" /> : pct(kpis?.dn)}</div>
           <div className="desc">% de tiendas que tienen el producto</div>
         </div>
         <div className="card card--primary">
           <div className="name">Disponibilidad</div>
-          <div className="kpi">{pct(kpis?.disp)}</div>
+          <div className="kpi">{kpisLoading ? <span className="skeleton" /> : pct(kpis?.disp)}</div>
           <div className="desc">% de lo presente que tiene stock</div>
         </div>
         <div className="card">
           <div className="name">Tiendas</div>
-          <div className="kpi">{kpis?.tiendas ?? '—'}</div>
+          <div className="kpi">{kpisLoading ? <span className="skeleton" /> : (kpis?.tiendas ?? '—')}</div>
           <div className="desc">en el denominador</div>
         </div>
         <div className="card">
           <div className="name">Observaciones</div>
-          <div className="kpi">{kpis?.observaciones ?? '—'}</div>
+          <div className="kpi">{kpisLoading ? <span className="skeleton" /> : (kpis?.observaciones ?? '—')}</div>
           <div className="desc">consideradas</div>
         </div>
       </div>
@@ -238,7 +244,7 @@ export default function Page() {
         <div className="chart">
           <div className="chartTitle">Distribución Numérica por canal</div>
           <div className="chartBox">
-            {dnCanal.length ? (
+            {chartsLoading ? <div className="spinner" /> : dnCanal.length ? (
               <Bar
                 data={{
                   labels: dnCanal.map(c => c.canal),
@@ -268,7 +274,7 @@ export default function Page() {
         <div className="chart">
           <div className="chartTitle">Estado de stock (última observación)</div>
           <div className="chartBox">
-            {stockTotal ? (
+            {chartsLoading ? <div className="spinner" /> : stockTotal ? (
               <Doughnut
                 data={{
                   labels: ['En stock', 'Bajo', 'Agotado', 'Sin dato'],
@@ -332,6 +338,7 @@ export default function Page() {
       </div>
 
       <div className="tableWrap">
+        {tableLoading && <div className="tableOverlay"><div className="spinner" /></div>}
         <table className="data">
           <thead>
             <tr>
