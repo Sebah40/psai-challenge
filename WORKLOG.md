@@ -130,6 +130,12 @@ Decidí agregar una tabla para ver qué datos se están filtrando y qué datos n
   qué cambiarías? (índices, una sola query vs varios round-trips, etc.) — en prosa, no hace
   falta implementarlo.
 
+### Pregunta de escala
+
+Lo que se rompe es que recalculo todo en vivo en cada request: el DISTINCT ON corre sobre los 50M en cada filtro, el OFFSET se degrada en páginas profundas, y la exclusión por UPDATE no existe contra un mart read-only (el sync la pisa). Encima le pego a un warehouse columnar, que es para batch y cobra por cómputo, en cada click.
+
+Qué cambiaría: pre-calcular el estado actual y los KPIs agregados (por tenant/canal/marca/fecha) en batch con cada sync, y servir el dashboard desde una capa de baja latencia (Postgres o Redis) que lee esos agregados chicos, con cache invalidado por sync. La tabla cruda con keyset pagination en vez de OFFSET, clusterizado por tenant_id, y las exclusiones en una tabla propia de la app que se joinea al pre-calcular. La idea: el cálculo caro se hace una vez por sync, no una vez por usuario.
+
 ## Qué dejaría para después / qué no llegué
 - Tests con su propia DB y fixtures en vez de pegarle a la DB de desarrollo.
 - Validación de inputs (hoy ?marca=abc devuelve 500 por el cast de Postgres).
